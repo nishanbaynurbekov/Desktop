@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Home.css';
 import { supabase } from '../supabase/supabase';
+import Loading from '../Loading/Loading'
 // import Like from '../supabase/Like';
 
 const Home = () => {
@@ -203,7 +204,7 @@ const Home = () => {
         </div>
 
         {loading? (
-          <div className="loading-spinner">Маалыматтар түзүлүп жатат...</div>
+          <Loading/>
         ) : (
           <div className="projects-visual-grid">
             {projects.map((p) => (
