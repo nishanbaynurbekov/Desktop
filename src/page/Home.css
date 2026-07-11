@@ -134,6 +134,19 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(179, 146, 99, 0.1);
 }
+.cancel-edit-btn{
+  background-color: #dc3545;
+  color: #ffffff;
+  border: none;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+  margin-left: 5px;
+}
 
 .submit-project-btn {
   background-color: #b39263;
@@ -148,7 +161,7 @@
   margin-top: 10px;
 }
 
-.submit-project-btn:hover {
+.submit-project-btn:hover, .cancel-edit-btn:hover {
   background-color: #1a1a1a;
 }
 
@@ -293,6 +306,22 @@
   padding-top: 15px;
   display: flex;
   justify-content: flex-end;
+}
+.edit-action-btn{
+  background-color: #fff5f5;
+  color: #366afa;
+  border: 1px solid #ffe3e3;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.edit-action-btn:hover {
+  background-color: #366afa;
+  color: #ffffff;
+  border-color: #366afa;
 }
 
 .delete-action-btn {

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './Home.css';
+import { supabase } from '../supabase/supabase';
+// import Like from '../supabase/Like';
 
 const Home = () => {
-  const API_URL = "https://69e59424ce4e908a155e2650.mockapi.io/Bhh/product";
-
+  // ЭМИ API_URL КЕРЕК ЭМЕС. Түз supabase менен иштейбиз
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  
-  // Учурда кайсы долбоор өзгөрүп жатканын билүү үчүн ID (null болсо - жаңы кошуу режими)
   const [editId, setEditId] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -20,11 +19,19 @@ const Home = () => {
     text: ''
   });
 
+  // ОҚУУ - READ
   const fetchProjects = async () => {
     try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
+      const { data, error } = await supabase
+       .from('products') // таблицанын аты
+       .select('*')
+       .order('id', { ascending: false }); // жаңылары өйдө чыксын
+
+      if (error) throw error;
+      
       setProjects(data);
+      console.log(supabase);
+      console.log(data);
       setLoading(false);
     } catch (err) {
       console.error("Маалымат жүктөөдө ката:", err);
@@ -37,46 +44,45 @@ const Home = () => {
   }, []);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({...formData, [e.target.name]: e.target.value });
   };
 
-  // КОШУУ ЖАНА ӨЗГӨРТҮҮ (CREATE & UPDATE)
+  // КОШУУ ЖАНА ӨЗГӨРТҮҮ - CREATE & UPDATE
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.category) {
+    if (!formData.title ||!formData.category) {
       alert("Аталышын жана категориясын сөзсүз толтуруңуз!");
       return;
     }
 
     try {
-      let res;
+      let error;
       if (editId) {
-        // Эгер editId бар болсо - ӨЗГӨРТҮҮ (PUT) режими иштейт
-        res = await fetch(`${API_URL}/${editId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
+        // Эгер editId бар болсо - ӨЗГӨРТҮҮ
+        const { error: updateError } = await supabase
+         .from('products')
+         .update(formData)
+         .eq('id', editId);
+        error = updateError;
       } else {
-        // Эгер editId жок болсо - ЖАҢЫ КОШУУ (POST) режими иштейт
-        res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
+        // Эгер editId жок болсо - ЖАҢЫ КОШУУ
+        const { error: insertError } = await supabase
+         .from('products')
+         .insert([formData]);
+        error = insertError;
       }
 
-      if (res.ok) {
-        alert(editId ? "Долбоор ийгиликтүү жаңыртылды! 🔄" : "Долбоор ийгиликтүү кошулду! 🎉");
-        resetForm();
-        fetchProjects();
-      }
+      if (error) throw error;
+
+      alert(editId? "Долбоор ийгиликтүү жаңыртылды! 🔄" : "Долбоор ийгиликтүү кошулду! 🎉");
+      resetForm();
+      fetchProjects();
     } catch (err) {
       console.error("Сайтка жиберүүдө ката кетти:", err);
+      alert("Ката кетти: " + err.message);
     }
   };
 
-  // Өзгөртүү баскычы басылганда маалыматты формага жүктөө
   const handleEditClick = (project) => {
     setEditId(project.id);
     setFormData({
@@ -87,33 +93,36 @@ const Home = () => {
       video: project.video || '',
       text: project.text || ''
     });
-    setIsFormOpen(true); // Форманы автоматтык түрдө ачуу
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Экранды өйдө жылдыруу
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Форманы тазалоо жана режимди баштапкы абалга келтирүү
   const resetForm = () => {
     setFormData({ title: '', location: '', category: 'remont', image: '', video: '', text: '' });
     setEditId(null);
     setIsFormOpen(false);
   };
 
-  // ӨЧҮРҮҮ (DELETE)
+  // ӨЧҮРҮҮ - DELETE
   const handleDelete = async (id) => {
     if (window.confirm("Бул долбоорду өчүрүүнү каалайсызбы?")) {
       try {
-        const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          alert("Долбоор өчүрүлдү!");
-          fetchProjects();
-        }
+        const { error } = await supabase
+         .from('products')
+         .delete()
+         .eq('id', id);
+
+        if (error) throw error;
+        
+        alert("Долбоор өчүрүлдү!");
+        fetchProjects();
       } catch (err) {
         console.error("Өчүрүүдө ката кетти:", err);
+        alert("Ката кетти: " + err.message);
       }
     }
   };
 
-  // Streamable шилтемесин embed форматка айландыруучу жардамчы функция
   const getEmbedVideoUrl = (url) => {
     if (!url) return null;
     if (url.includes('streamable.com/e/')) return url;
@@ -129,17 +138,16 @@ const Home = () => {
         </div>
         
         <button 
-          className={`toggle-form-btn ${isFormOpen ? 'active' : ''}`}
+          className={`toggle-form-btn ${isFormOpen? 'active' : ''}`}
           onClick={() => { if (isFormOpen) resetForm(); else setIsFormOpen(true); }}
         >
-          {isFormOpen ? '❌ Форманы жабуу' : '➕ Сайтка маалымат жүктөө'}
+          {isFormOpen? '❌ Форманы жабуу' : '➕ Сайтка маалымат жүктөө'}
         </button>
       </header>
 
-      {/* АЧЫП-ЖАПМА ФОРМА */}
-      <div className={`sliding-form-wrapper ${isFormOpen ? 'open' : ''}`}>
+      <div className={`sliding-form-wrapper ${isFormOpen? 'open' : ''}`}>
         <div className="form-inner-card">
-          <h3>{editId ? '📝 Долбоордун маалыматтарын өзгөртүү' : 'Жаңы Долбоор Киргизүү Терминалы'}</h3>
+          <h3>{editId? '📝 Долбоордун маалыматтарын өзгөртүү' : 'Жаңы Долбоор Киргизүү Терминалы'}</h3>
           <form onSubmit={handleSubmit} className="premium-form">
             <div className="form-row">
               <div className="form-field">
@@ -178,7 +186,7 @@ const Home = () => {
 
             <div className="form-buttons-group">
               <button type="submit" className="submit-project-btn">
-                {editId ? '🔄 Өзгөрүүлөрдү сактоо' : 'Ырастоо жана Сайтка чыгаруу'}
+                {editId? '🔄 Өзгөрүүлөрдү сактоо' : 'Ырастоо жана Сайтка чыгаруу'}
               </button>
               {editId && (
                 <button type="button" onClick={resetForm} className="cancel-edit-btn">❌ Жокко чыгаруу</button>
@@ -188,23 +196,21 @@ const Home = () => {
         </div>
       </div>
 
-      {/* ПРОЕКТТЕРДИН ГРИД КАТАЛОГУ */}
       <main className="projects-grid-section">
         <div className="section-title-bar">
           <h2>📋 Сайтта жайгашкан долбоорлор <span>({projects.length})</span></h2>
           <p>Сайтыңыздагы визуалдык материалдардын жана маалыматтардын тизмеси</p>
         </div>
 
-        {loading ? (
+        {loading? (
           <div className="loading-spinner">Маалыматтар түзүлүп жатат...</div>
         ) : (
           <div className="projects-visual-grid">
             {projects.map((p) => (
               <div className="project-visual-card" key={p.id}>
                 
-                {/* МЕДИА БӨЛҮГҮ (Жандуу видео же сүрөт көрсөтөт) */}
                 <div className="card-media-preview">
-                  {p.video ? (
+                  {p.video? (
                     <iframe 
                       src={getEmbedVideoUrl(p.video)} 
                       width="100%" 
@@ -214,27 +220,29 @@ const Home = () => {
                       title={p.title}
                       className="embedded-video-player"
                     ></iframe>
-                  ) : p.image ? (
+                  ) : p.image? (
                     <img src={p.image} alt={p.title} onError={(e) => {e.target.src = 'https://placehold.co/600x400?text=Сүрөт+Ката';}} />
                   ) : (
-                    <div className="no-media-placeholder">🖼️ Визуалдык сүрөт жок</div>
+                    <div className="no-media-placeholder">🖼 Визуалдык сүрөт жок</div>
                   )}
                   <span className={`category-tag ${p.category}`}>{p.category}</span>
                 </div>
 
-                {/* МААЛЫМАТТАР БӨЛҮГҮ */}
                 <div className="card-body-info">
                   <h4>{p.title}</h4>
                   <p className="project-address">📍 {p.location || 'Дареги көрсөтүлгөн эмес'}</p>
                   {p.text && <p className="project-description-text">{p.text}</p>}
                   
-                  {/* Башкаруу баскычтары (Өзгөртүү жана Өчүрүү) */}
-                  <div className="card-action-footer">
+                  <div className="card-action-footer">❤️
+                    <span style={{
+                      display: "flex",
+                      marginRight: "240px"
+                    }}>{p.like}</span> 
                     <button onClick={() => handleEditClick(p)} className="edit-action-btn">
-                      ✏️ Өзгөртүү
+                      ✏ Өзгөртүү
                     </button>
                     <button onClick={() => handleDelete(p.id)} className="delete-action-btn">
-                      🗑️ Өчүрүү
+                      🗑 Өчүрүү
                     </button>
                   </div>
                 </div>
