@@ -79,6 +79,8 @@ const Home = () => {
       resetForm();
       fetchProjects();
     } catch (err) {
+      console.log(fetchProjects);
+      
       console.error("Сайтка жиберүүдө ката кетти:", err);
       alert("Ката кетти: " + err.message);
     }
